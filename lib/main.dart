@@ -1,3 +1,8 @@
+// show : imports only that functionality instead  of all of them
+// as: gives an alias to the package to avoid confusion with other imported packages
+
+import 'dart:developer' as devtools show log;
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -25,8 +30,9 @@ class MyApp extends StatelessWidget {
       ),
       home: const HomePage(),
       routes: {
-        '/login': (context) => const LoginView(),
-        '/register': (context) => const RegisterView(),
+        '/login/': (context) => const LoginView(),
+        '/register/': (context) => const RegisterView(),
+        '/notes/': (context) => const NotesView(),
       },
     );
   }
@@ -49,18 +55,103 @@ class HomePage extends StatelessWidget {
 
             if (user != null) {
               if (user.emailVerified) {
-                print("email is verified");
+                devtools.log("email is verified");
+                return const NotesView();
               } else {
                 return const VerifyEmailView();
               }
             } else {
               return const LoginView();
             }
-            return const Text("Done");
+
           default:
             return const CircularProgressIndicator();
         }
       },
     );
   }
+}
+
+enum MenuAction {
+  logout,
+}
+
+class NotesView extends StatefulWidget {
+  const NotesView({super.key});
+
+  @override
+  State<NotesView> createState() => _NotesViewState();
+}
+
+class _NotesViewState extends State<NotesView> {
+  @override
+  Widget build(BuildContext context) {
+    final navigator = Navigator.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Main UI'),
+        actions: [
+          // enum declared up
+          PopupMenuButton<MenuAction>(
+            onSelected: (value) async {
+              // just logs the value, better than using print
+              devtools.log(value.toString());
+              switch (value) {
+                case MenuAction.logout:
+                  final shouldLogout = await showLogOutDialog(context);
+                  devtools.log(shouldLogout.toString());
+                  if (shouldLogout) {
+                    await FirebaseAuth.instance.signOut();
+                    // linea agregada stack overflow
+                    // if (!mounted) return;
+                    navigator.pushNamedAndRemoveUntil("/login/", (_) => false);
+                  }
+
+                  break;
+              }
+            },
+            itemBuilder: (context) {
+              // item builder expects a list
+              return const [
+                PopupMenuItem<MenuAction>(
+                  value: MenuAction.logout,
+                  child: Text("Log out"),
+                ),
+              ];
+            },
+          )
+        ],
+      ),
+      body: const Text("Hello World"),
+    );
+  }
+}
+
+// Future to show dialog in the screen when user tap logout menuitembutton
+// returns a boolean
+Future<bool> showLogOutDialog(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("Sign out"),
+        content: const Text("Are you sure you want to sign out"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(false);
+            },
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(true);
+            },
+            child: const Text("Log out"),
+          ),
+        ],
+      );
+    },
+    // no entiendo esta  parte hora: 13hs freecodecamp
+  ).then((value) => value ?? false);
 }
