@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:my_notes/constants/routes.dart';
+import 'package:my_notes/utilities/show_error_dialog.dart';
 import 'dart:developer' as devtool show log;
 
 import '../firebase_options.dart';
@@ -33,6 +34,7 @@ class _RegisterViewState extends State<RegisterView> {
 
   @override
   Widget build(BuildContext context) {
+    final navigator = Navigator.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text("Register")),
       body: FutureBuilder(
@@ -67,19 +69,49 @@ class _RegisterViewState extends State<RegisterView> {
                       final email = _email.text;
                       final password = _password.text;
                       try {
-                        final userCredential = await FirebaseAuth.instance
+                        await FirebaseAuth.instance
                             .createUserWithEmailAndPassword(
-                                email: email, password: password);
-                        devtool.log(userCredential.toString());
+                          email: email,
+                          password: password,
+                        );
+                        final user = FirebaseAuth.instance.currentUser;
+                        await user?.sendEmailVerification();
+                        // Error= dThis warning essentially reminds you that,
+                        //after an async call, the BuildContext might not be valid anymore
+                        //CODE: Navigator.of(context).pushNamed(verifyEmailRoute);
+                        //SOLUTION:
+                        navigator.pushNamed(verifyEmailRoute);
                       } on FirebaseAuthException catch (e) {
                         devtool.log(e.code);
                         if (e.code == "weak-password") {
                           devtool.log("Weak Password");
+                          await showErrorDialog(
+                            context,
+                            "Weak Password",
+                          );
                         } else if (e.code == "email-already-in-use") {
                           devtool.log("Email already in use");
+                          await showErrorDialog(
+                            context,
+                            "Email already in use",
+                          );
                         } else if (e.code == "invalid-email") {
                           devtool.log("Invalid Email");
+                          await showErrorDialog(
+                            context,
+                            "Invalid Email",
+                          );
+                        } else {
+                          await showErrorDialog(
+                            context,
+                            "Error: ${e.code}",
+                          );
                         }
+                      } catch (e) {
+                        await showErrorDialog(
+                          context,
+                          e.toString(),
+                        );
                       }
                       // creates an user
                     },
