@@ -66,12 +66,20 @@ class _LoginViewState extends State<LoginView> {
                   email: email,
                   password: password,
                 );
+                final user = FirebaseAuth.instance.currentUser;
+                if (user?.emailVerified ?? false) {
+                  // user email is verified
+                  devtool.log(userCredential.toString());
+                  // Navigates to notes view and removes the login view from the stack
+                  // still have this error i dont understand the reason of this error.
 
-                devtool.log(userCredential.toString());
-                // Navigates to notes view and removes the login view from the stack
-                // still have this error i dont understand the reason of this error.
-
-                navigator.pushNamedAndRemoveUntil(notesRoute, (route) => false);
+                  navigator.pushNamedAndRemoveUntil(
+                      notesRoute, (route) => false);
+                } else {
+                  // user email is NOT verified
+                  navigator.pushNamedAndRemoveUntil(
+                      verifyEmailRoute, (route) => false);
+                }
 
                 // it's called catch-all: it catches every exception that may occurr
                 // most common errors
